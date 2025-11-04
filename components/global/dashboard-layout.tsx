@@ -3,8 +3,8 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Sidebar } from "@/components/sidebar"
-import { Header } from "@/components/header"
+import { Sidebar } from "@/components/global/sidebar"
+import { Header } from "@/components/global/header"
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)

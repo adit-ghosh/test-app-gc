@@ -14,6 +14,10 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Target,
+  Navigation,
+  Radar,
+  Rocket,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
@@ -27,14 +31,16 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
 
+  // 🚀 UPDATED: More engaging, action-oriented menu names
   const navItems = [
-    { href: "/", label: "Dashboard", icon: Home },
-    { href: "/gc-score", label: "GC Score", icon: Zap },
-    { href: "/ai-suggestions", label: "AI Suggestions", icon: TrendingUp },
-    { href: "/career-diversion", label: "Career Diversion", icon: Compass },
-    { href: "/career-roadmap", label: "Career Roadmap", icon: Briefcase },
-    { href: "/company-matches", label: "Company Matches", icon: Users },
-    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/", label: "Growth Pulse", icon: Home, description: "Your progress dashboard" },
+    { href: "#", label: "Growth Analytics", icon: Zap, description: "Deep score insights" },
+    { href: "/#", label: "Growth Accelerator", icon: Rocket, description: "AI-powered tips" },
+    { href: "/#", label: "Path Explorer", icon: Compass, description: "Discover new careers" },
+    { href: "/#", label: "Career Navigator", icon: Navigation, description: "Your growth map" },
+    { href: "/#", label: "Opportunity Radar", icon: Radar, description: "Active job matches" },
+    { href: "/#", label: "Growth Arena", icon: Target, description: "Compete & grow" },
+    { href: "/#", label: "Settings", icon: Settings, description: "Account preferences" },
   ]
 
   return (
@@ -57,7 +63,10 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
               <span className="text-primary-foreground font-bold text-sm">GC</span>
             </div>
             {!isCollapsed && (
-              <span className="font-semibold text-foreground hidden md:inline whitespace-nowrap">Growth Charter</span>
+              <div>
+                <span className="font-semibold text-foreground hidden md:inline whitespace-nowrap">Growth Charter</span>
+                <p className="text-xs text-muted-foreground hidden md:block">Human Potential Engine</p>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-1">
@@ -84,14 +93,21 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors whitespace-nowrap",
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors whitespace-nowrap group",
                   isActive ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted",
                   isCollapsed && "md:justify-center md:px-2",
                 )}
                 title={isCollapsed ? item.label : undefined}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
-                {!isCollapsed && <span className="font-medium hidden md:inline">{item.label}</span>}
+                {!isCollapsed && (
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium hidden md:inline block">{item.label}</span>
+                    <span className="text-xs text-current-foreground group-hover:text-current hidden md:block">
+                      {item.description}
+                    </span>
+                  </div>
+                )}
                 <span className="font-medium md:hidden">{item.label}</span>
               </Link>
             )
@@ -100,20 +116,17 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
 
         {/* Footer */}
         <div className="p-4 border-t border-border">
-          <Link href="/login">
-
-            <button
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-foreground hover:bg-muted transition-colors",
-                isCollapsed && "md:justify-center md:px-2",
-              )}
-              title={isCollapsed ? "Logout" : undefined}
-            >
-              <LogOut className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium hidden md:inline">{!isCollapsed && "Logout"}</span>
-              <span className="font-medium md:hidden">Logout</span>
-            </button>
-          </Link>
+          <button
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-foreground hover:bg-muted transition-colors",
+              isCollapsed && "md:justify-center md:px-2",
+            )}
+            title={isCollapsed ? "Logout" : undefined}
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <span className="font-medium hidden md:inline">{!isCollapsed && "Logout"}</span>
+            <span className="font-medium md:hidden">Logout</span>
+          </button>
         </div>
       </aside>
     </>

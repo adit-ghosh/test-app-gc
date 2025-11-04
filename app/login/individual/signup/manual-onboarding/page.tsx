@@ -9,10 +9,10 @@ import { Card } from "@/components/ui/card"
 import { User, BookOpen, Briefcase, Users, Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-import { OnboardingPersonal } from "@/components/onboarding-personal"
-import { OnboardingAcademic } from "@/components/onboarding-academic"
-import { OnboardingSkills } from "@/components/onboarding-skills"
-import { OnboardingReferences } from "@/components/onboarding-references"
+import { OnboardingPersonal } from "@/components/global/onboarding-personal"
+import { OnboardingAcademic } from "@/components/global/onboarding-academic"
+import { OnboardingSkills } from "@/components/global/onboarding-skills"
+import { OnboardingReferences } from "@/components/global/onboarding-references"
 
 type TabType = "personal" | "academic" | "skills" | "references"
 
