@@ -4,6 +4,8 @@ import { useState, useRef } from "react"
 import { ArrowLeft, ArrowRight, Building2, User, Apple } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
+import gc_logo from "@/public/gc_logo.svg"
 
 export default function LoginPage() {
   const [state, setState] = useState<"default" | "to-org" | "to-ind" | "left-minimized">("default")
@@ -15,6 +17,30 @@ export default function LoginPage() {
 
         {/* =================== DESKTOP + TABLET =================== */}
         <div className="hidden md:flex h-[640px] lg:h-[680px] relative overflow-hidden transition-all duration-700">
+          {/* ---- COMPONENT 2 ---- */}
+          <section
+            className={[
+              "relative w-1/2 bg-gradient-to-br from-[#3b7546] to-[#2f5f38] text-white flex flex-col justify-center p-8 md:p-6 lg:p-12 transition-transform duration-700 ease-[cubic-bezier(.25,1,.5,1)]",
+              state === "to-org" ? "translate-x-full" : "translate-x-0",
+            ].join(" ")}
+          >
+            <Image src={gc_logo} alt="Growth Charter Logo" className="ml-[-35px] h-42 w-63 rounded-sm brightness-0 invert" />
+            <p className="text-base lg:text-lg opacity-90 mb-6 lg:mb-8">
+              Your personal career growth companion. Track progress, get AI insights, and unlock opportunities.
+            </p>
+            <ul className="space-y-1.5 lg:space-y-2 text-sm opacity-90">
+              <li className="flex gap-2 items-center">
+                <span className="w-2 h-2 bg-white rounded-full" /> AI-powered career recommendations
+              </li>
+              <li className="flex gap-2 items-center">
+                <span className="w-2 h-2 bg-white rounded-full" /> Skill tracking and development
+              </li>
+              <li className="flex gap-2 items-center">
+                <span className="w-2 h-2 bg-white rounded-full" /> Personalized growth insights
+              </li>
+            </ul>
+          </section>
+
           {/* ---- COMPONENT 1 ---- */}
           <section
             className={[
@@ -46,7 +72,7 @@ export default function LoginPage() {
           {/* ---- COMPONENT 4 ---- */}
           <section
             className={[
-              "absolute left-0 top-0 h-full w-1/2 bg-white flex flex-col items-center justify-center text-center p-8 lg:p-12 md:p-6",
+              "absolute right-0 top-0 h-full w-1/2 bg-white flex flex-col items-center justify-center text-center p-8 lg:p-12 md:p-6",
               "transition-all duration-700 ease-out",
               state === "left-minimized"
                 ? "opacity-100 translate-y-0 z-30 pointer-events-auto"
@@ -57,36 +83,11 @@ export default function LoginPage() {
             <FormSection onBack={() => setState("default")} />
           </section>
 
-          {/* ---- COMPONENT 2 ---- */}
-          <section
-            className={[
-              "relative w-1/2 bg-gradient-to-br from-[#3b7546] to-[#2f5f38] text-white flex flex-col justify-center p-8 md:p-6 lg:p-12 transition-transform duration-700 ease-[cubic-bezier(.25,1,.5,1)]",
-              state === "to-org" ? "-translate-x-full" : "translate-x-0",
-            ].join(" ")}
-          >
-            <User className="w-14 h-14 lg:w-16 lg:h-16 mb-5" />
-            <h1 className="text-3xl lg:text-4xl font-bold mb-3">Growth Charter</h1>
-            <p className="text-base lg:text-lg opacity-90 mb-6 lg:mb-8">
-              Your personal career growth companion. Track progress, get AI insights, and unlock opportunities.
-            </p>
-            <ul className="space-y-1.5 lg:space-y-2 text-sm opacity-90">
-              <li className="flex gap-2 items-center">
-                <span className="w-2 h-2 bg-white rounded-full" /> AI-powered career recommendations
-              </li>
-              <li className="flex gap-2 items-center">
-                <span className="w-2 h-2 bg-white rounded-full" /> Skill tracking and development
-              </li>
-              <li className="flex gap-2 items-center">
-                <span className="w-2 h-2 bg-white rounded-full" /> Personalized growth insights
-              </li>
-            </ul>
-          </section>
-
           {/* ---- COMPONENT 3 ---- */}
           <section
             className={[
-              "absolute right-0 top-0 h-full w-1/2 bg-white flex flex-col justify-center items-center text-center p-8 md:p-6 lg:p-12 transition-transform duration-700 ease-[cubic-bezier(.25,1,.5,1)]",
-              state === "to-org" ? "translate-x-0" : "translate-x-full",
+              "absolute left-0 top-0 h-full w-1/2 bg-white flex flex-col justify-center items-center text-center p-8 md:p-6 lg:p-12 transition-transform duration-700 ease-[cubic-bezier(.25,1,.5,1)]",
+              state === "to-org" ? "translate-x-0" : "-translate-x-full",
             ].join(" ")}
           >
             <Building2 className="w-16 h-16 lg:w-20 lg:h-20 text-gray-400 mb-5" />

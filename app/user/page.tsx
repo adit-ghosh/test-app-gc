@@ -1,33 +1,53 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Card } from "@/components/base/card"
-import { Button } from "@/components/base/button"
-import { cn } from "@/lib/utils"
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card } from "@/components/base/card";
+import { Button } from "@/components/base/button";
+import { cn } from "@/lib/utils";
 import {
-  User, Pencil, MapPin, BookOpen, Briefcase, Stars,
-  Download, Camera, Image as ImageIcon, Settings, LogOut, Crown,
-  Info, ExternalLink, Plus, X, Menu, ChevronLeft, ChevronRight
-} from "lucide-react"
-import { motion } from "framer-motion"
+  User,
+  Pencil,
+  MapPin,
+  Briefcase,
+  Stars,
+  FileText,
+  Download,
+  X,
+  Settings,
+  LogOut,
+  Crown,
+  AlertTriangle,
+  Plus,
+  Key,
+  Check,
+  Image as ImageIcon,
+  ExternalLink,
+} from "lucide-react";
 
-/* ------------------------------------------------------------- */
-/* Types & Defaults                                               */
-/* ------------------------------------------------------------- */
-
+/* -------------------------------------------------------------------------- */
+/* Types and Defaults */
+/* -------------------------------------------------------------------------- */
 type ProfileData = {
-  fullName?: string
-  headline?: string
-  location?: string
-  email?: string
-  linkedin?: string
-  bannerUrl?: string
-  avatarUrl?: string
-  education?: Array<{ degree: string; institution: string; field?: string; gpa?: string }>
-  experience?: Array<{ company: string; role: string; duration?: string; project?: string }>
-  skills?: string[]
-}
+  fullName?: string;
+  headline?: string;
+  location?: string;
+  email?: string;
+  linkedin?: string;
+  bannerUrl?: string;
+  avatarUrl?: string;
+  education?: Array<{ degree: string; institution: string; field?: string; gpa?: string }>;
+  experience?: Array<{ company: string; role: string; duration?: string; project?: string }>;
+  skills?: string[];
+};
+
+type AccountSettings = {
+  email: string;
+  phone: string;
+  notifications: { email: boolean; push: boolean; marketing: boolean };
+  privacy: { profileVisible: boolean; showEmail: boolean; showPhone: boolean };
+  security: { twoFactor: boolean; lastPasswordChange: string };
+};
 
 const DEFAULT_PROFILE: ProfileData = {
   fullName: "",
@@ -40,725 +60,525 @@ const DEFAULT_PROFILE: ProfileData = {
   education: [],
   experience: [],
   skills: [],
+};
+
+const DEFAULT_SETTINGS: AccountSettings = {
+  email: "",
+  phone: "",
+  notifications: { email: true, push: true, marketing: false },
+  privacy: { profileVisible: true, showEmail: false, showPhone: false },
+  security: { twoFactor: false, lastPasswordChange: "Never" },
+};
+
+/* -------------------------------------------------------------------------- */
+/* Main Component */
+/* -------------------------------------------------------------------------- */
+export default function UserDashboard() {
+  const router = useRouter();
+  const [profile, setProfile] = useState<ProfileData>(DEFAULT_PROFILE);
+  const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
+  const [activeTab, setActiveTab] = useState<"overview" | "resume" | "settings">("overview");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [modal, setModal] = useState<null | "personal" | "skills">(null);
+
+  /* Load & Save Data */
+  useEffect(() => {
+    try {
+      const p = localStorage.getItem("profile_data");
+      const s = localStorage.getItem("account_settings");
+      if (p) setProfile(JSON.parse(p));
+      if (s) setSettings(JSON.parse(s));
+    } catch { }
+  }, []);
+
+  useEffect(() => localStorage.setItem("profile_data", JSON.stringify(profile)), [profile]);
+  useEffect(() => localStorage.setItem("account_settings", JSON.stringify(settings)), [settings]);
+
+  const completion = useMemo(() => {
+    const checks: Array<[boolean, number]> = [
+      [!!profile.fullName, 10],
+      [!!profile.headline, 10],
+      [!!profile.location, 5],
+      [!!profile.email, 5],
+      [!!profile.linkedin, 5],
+      [!!(profile.education && profile.education.length), 10],
+      [!!(profile.experience && profile.experience.length), 15],
+      [!!(profile.skills && profile.skills.length >= 5), 15],
+    ];
+    return Math.min(100, checks.reduce((s, [ok, v]) => s + (ok ? v : 0), 0));
+  }, [profile]);
+
+  const savePartial = (partial: Partial<ProfileData>) => setProfile((p) => ({ ...p, ...partial }));
+  const saveSettings = (newSettings: Partial<AccountSettings>) => setSettings((s) => ({ ...s, ...newSettings }));
+
+  const exportData = () => {
+    const data = { profile, settings, exportDate: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "growth-charter-data.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const deleteAccount = () => {
+    localStorage.clear();
+    router.push("/");
+  };
+
+  const downloadResume = (format: "pdf" | "docx" | "txt") => {
+    const content = `${profile.fullName || "Your Name"}\n${profile.headline || ""}\n\nContact: ${profile.email || ""}\nLocation: ${profile.location || ""}\nLinkedIn: ${profile.linkedin || ""}\n\nSkills: ${profile.skills?.join(", ") || ""}`;
+    const blob = new Blob([content], {
+      type:
+        format === "pdf"
+          ? "application/pdf"
+          : format === "docx"
+            ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            : "text/plain",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `resume.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  /* ---------------------------------------------------------------------- */
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-[#f8f9fa] via-[#f1f3f2] to-[#e9ecef]">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#1b4332]">Growth Charter</h1>
+            <p className="text-sm text-[#4f6f56] hidden sm:block">Your Professional Profile</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => router.push("/pricing")} size="sm" className="gap-1 bg-[#1b4332] hover:bg-[#2d6a4f] text-xs sm:text-sm">
+              <Crown className="w-3 h-3 sm:w-4 sm:h-4" /> Pricing
+            </Button>
+            <Button variant="outline" onClick={() => router.push("/")} size="sm" className="gap-1 text-xs sm:text-sm">
+              <LogOut className="w-3 h-3 sm:w-4 sm:h-4" /> Sign out
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-200 sticky top-[73px] sm:top-[81px] z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1">
+          {[
+            { id: "overview", label: "Overview", icon: <User className="w-4 h-4" /> },
+            { id: "resume", label: "Resume & Skills", icon: <Briefcase className="w-4 h-4" /> },
+            { id: "settings", label: "Settings", icon: <Settings className="w-4 h-4" /> },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2",
+                activeTab === tab.id ? "border-[#1b4332] text-[#1b4332]" : "border-transparent text-gray-600 hover:text-[#1b4332]"
+              )}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {activeTab === "overview" && (
+          <OverviewTab profile={profile} completion={completion} setModal={setModal} savePartial={savePartial} />
+        )}
+        {activeTab === "resume" && <ResumeTab profile={profile} onDownload={downloadResume} />}
+        {activeTab === "settings" && (
+          <SettingsTab settings={settings} saveSettings={saveSettings} exportData={exportData} setShowDeleteConfirm={setShowDeleteConfirm} />
+        )}
+      </div>
+
+      {/* Modals */}
+      {modal && (
+        <Modal title={modal === "personal" ? "Edit Personal Info" : "Edit Skills"} onClose={() => setModal(null)}>
+          {modal === "personal" ? (
+            <PersonalModal profile={profile} onSave={savePartial} onClose={() => setModal(null)} />
+          ) : (
+            <SkillsModal profile={profile} onSave={savePartial} onClose={() => setModal(null)} />
+          )}
+        </Modal>
+      )}
+
+      {/* Delete Confirm */}
+      {showDeleteConfirm && (
+        <Modal title="Delete Account" danger onClose={() => setShowDeleteConfirm(false)}>
+          <p className="text-gray-600 mb-4">
+            This action cannot be undone. All your data will be permanently deleted.
+          </p>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={deleteAccount} className="flex-1 bg-red-600 hover:bg-red-700">
+              Delete Account
+            </Button>
+          </div>
+        </Modal>
+      )}
+    </main>
+  );
 }
 
-/* ------------------------------------------------------------- */
-/* Modal Components                                               */
-/* ------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* Components */
+/* -------------------------------------------------------------------------- */
 
-function PersonalModal({ profile, onSave, onClose }: { profile: ProfileData; onSave: (data: Partial<ProfileData>) => void; onClose: () => void }) {
+function OverviewTab({ profile, completion, setModal, savePartial }: any) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-6">
+      {/* Banner */}
+      <Card className="overflow-hidden relative">
+        {/* Banner Image */}
+        <div className="h-32 sm:h-40 bg-gradient-to-r from-[#1b4332] to-[#40916c] relative">
+          {profile.bannerUrl && (
+            <img
+              src={profile.bannerUrl}
+              className="absolute inset-0 w-full h-full object-cover opacity-80"
+            />
+          )}
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="absolute bottom-2 right-2 px-3 py-1 bg-white/80 rounded-full text-xs text-[#1b4332]"
+          >
+            <ImageIcon className="w-3 h-3 inline mr-1" /> Change Banner
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) =>
+              e.target.files?.[0] &&
+              savePartial({ bannerUrl: URL.createObjectURL(e.target.files[0]) })
+            }
+          />
+        </div>
+
+        {/* Profile Info */}
+        <div className="p-6 relative">
+          {/* Avatar overlapping banner */}
+          <div className="absolute -top-10 left-6">
+            <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl overflow-hidden ring-4 ring-white shadow-lg bg-white flex items-center justify-center">
+              {profile.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="w-10 h-10 text-[#1b4332]/40" />
+              )}
+            </div>
+          </div>
+
+          {/* Profile Text */}
+          <div className="flex flex-col sm:flex-row gap-4 pl-28 sm:pl-32 pt-[-240px]">
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold text-[#1b4332]">
+                {profile.fullName || "Your Name"}
+              </h2>
+              <p className="text-sm text-[#2d6a4f]">
+                {profile.headline || "Add a professional headline"}
+              </p>
+              <div className="flex flex-wrap gap-3 text-xs text-gray-600 mt-2">
+                {profile.location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> {profile.location}
+                  </span>
+                )}
+                {profile.linkedin && (
+                  <span className="flex items-center gap-1">
+                    <ExternalLink className="w-3 h-3" /> {profile.linkedin}
+                  </span>
+                )}
+                {profile.email && <span>{profile.email}</span>}
+              </div>
+              <Button
+                onClick={() => setModal("personal")}
+                size="sm"
+                variant="outline"
+                className="mt-3"
+              >
+                <Pencil className="w-4 h-4 mr-1" /> Edit Profile
+              </Button>
+            </div>
+          </div>
+
+          {/* Completion Bar */}
+          <div className="mt-2">
+            <div className="flex justify-between text-sm mb-1 text-[#1b4332]">
+              <span>Profile Completion</span>
+              <span>{completion}%</span>
+            </div>
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#74c69d] to-[#1b4332]"
+                style={{ width: `${completion}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Skills, Education, Experience */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="p-5">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-semibold text-[#1b4332] flex items-center gap-2">
+              <Stars className="w-4 h-4" /> Skills
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => setModal("skills")}>
+              <Pencil className="w-4 h-4" />
+            </Button>
+          </div>
+          {profile.skills?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {profile.skills.map((s: string, i: number) => (
+                <span key={i} className="px-2 py-1 bg-[#e9f5ef] text-[#1b4332] text-xs rounded-full">
+                  {s}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">Add your top skills</p>
+          )}
+        </Card>
+
+        <Card className="p-5 md:col-span-2">
+          <h3 className="font-semibold text-[#1b4332] mb-3 flex items-center gap-2">
+            <Briefcase className="w-4 h-4" /> Experience
+          </h3>
+          {profile.experience?.length ? (
+            <div className="space-y-2">
+              {profile.experience.map((ex: { company: string; role: string; duration?: string; project?: string }, i: number) => (
+                <div key={i} className="p-3 border rounded-lg bg-white/70">
+                  <p className="font-medium text-[#1b4332] text-sm">
+                    {ex.role} — {ex.company}
+                  </p>
+                  <p className="text-xs text-gray-600">{ex.duration}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">Add your experience</p>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* Modals */
+function Modal({ title, children, onClose, danger }: any) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={cn("text-lg font-semibold", danger ? "text-red-600" : "text-[#1b4332]")}>{title}</h2>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PersonalModal({ profile, onSave, onClose }: any) {
   const [data, setData] = useState({
     fullName: profile.fullName || "",
     headline: profile.headline || "",
     location: profile.location || "",
     email: profile.email || "",
     linkedin: profile.linkedin || "",
-  })
-
-  const handleSave = () => {
-    onSave(data)
-    onClose()
-  }
-
+  });
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-[#1b4332] mb-1">Full Name</label>
-        <input
-          type="text"
-          value={data.fullName}
-          onChange={(e) => setData({ ...data, fullName: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-          placeholder="Your full name"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-[#1b4332] mb-1">Professional Headline</label>
-        <input
-          type="text"
-          value={data.headline}
-          onChange={(e) => setData({ ...data, headline: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-          placeholder="e.g. Software Engineer at Google"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-[#1b4332] mb-1">Location</label>
-        <input
-          type="text"
-          value={data.location}
-          onChange={(e) => setData({ ...data, location: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-          placeholder="City, Country"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-[#1b4332] mb-1">Email</label>
-        <input
-          type="email"
-          value={data.email}
-          onChange={(e) => setData({ ...data, email: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-          placeholder="your.email@example.com"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-[#1b4332] mb-1">LinkedIn Profile</label>
-        <input
-          type="text"
-          value={data.linkedin}
-          onChange={(e) => setData({ ...data, linkedin: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-          placeholder="linkedin.com/in/yourprofile"
-        />
-      </div>
-      <div className="flex gap-3 pt-4">
-        <Button onClick={handleSave} className="flex-1 bg-[#1b4332] hover:bg-[#2d6a4f]">
-          Save Changes
-        </Button>
-        <Button variant="outline" onClick={onClose} className="flex-1">
-          Cancel
-        </Button>
-      </div>
-    </div>
-  )
-}function 
-EducationModal({ profile, onSave, onClose }: { profile: ProfileData; onSave: (data: Partial<ProfileData>) => void; onClose: () => void }) {
-  const [education, setEducation] = useState(profile.education || [])
-
-  const addEducation = () => {
-    setEducation([...education, { degree: "", institution: "", field: "", gpa: "" }])
-  }
-
-  const updateEducation = (index: number, field: string, value: string) => {
-    const updated = [...education]
-    updated[index] = { ...updated[index], [field]: value }
-    setEducation(updated)
-  }
-
-  const removeEducation = (index: number) => {
-    setEducation(education.filter((_, i) => i !== index))
-  }
-
-  const handleSave = () => {
-    onSave({ education: education.filter(ed => ed.degree || ed.institution) })
-    onClose()
-  }
-
-  return (
-    <div className="space-y-4 max-h-96 overflow-y-auto">
-      {education.map((ed, index) => (
-        <div key={index} className="p-4 border rounded-lg space-y-3">
-          <div className="flex justify-between items-center">
-            <h4 className="font-medium text-[#1b4332]">Education {index + 1}</h4>
-            <Button variant="ghost" size="sm" onClick={() => removeEducation(index)}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              type="text"
-              value={ed.degree}
-              onChange={(e) => updateEducation(index, "degree", e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-              placeholder="Degree"
-            />
-            <input
-              type="text"
-              value={ed.institution}
-              onChange={(e) => updateEducation(index, "institution", e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-              placeholder="Institution"
-            />
-            <input
-              type="text"
-              value={ed.field || ""}
-              onChange={(e) => updateEducation(index, "field", e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-              placeholder="Field of Study"
-            />
-            <input
-              type="text"
-              value={ed.gpa || ""}
-              onChange={(e) => updateEducation(index, "gpa", e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-              placeholder="GPA (optional)"
-            />
-          </div>
-        </div>
-      ))}
-      <Button variant="outline" onClick={addEducation} className="w-full gap-2">
-        <Plus className="w-4 h-4" /> Add Education
-      </Button>
-      <div className="flex gap-3 pt-4">
-        <Button onClick={handleSave} className="flex-1 bg-[#1b4332] hover:bg-[#2d6a4f]">
-          Save Changes
-        </Button>
-        <Button variant="outline" onClick={onClose} className="flex-1">
-          Cancel
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function ExperienceModal({ profile, onSave, onClose }: { profile: ProfileData; onSave: (data: Partial<ProfileData>) => void; onClose: () => void }) {
-  const [experience, setExperience] = useState(profile.experience || [])
-
-  const addExperience = () => {
-    setExperience([...experience, { company: "", role: "", duration: "", project: "" }])
-  }
-
-  const updateExperience = (index: number, field: string, value: string) => {
-    const updated = [...experience]
-    updated[index] = { ...updated[index], [field]: value }
-    setExperience(updated)
-  }
-
-  const removeExperience = (index: number) => {
-    setExperience(experience.filter((_, i) => i !== index))
-  }
-
-  const handleSave = () => {
-    onSave({ experience: experience.filter(ex => ex.company || ex.role) })
-    onClose()
-  }
-
-  return (
-    <div className="space-y-4 max-h-96 overflow-y-auto">
-      {experience.map((ex, index) => (
-        <div key={index} className="p-4 border rounded-lg space-y-3">
-          <div className="flex justify-between items-center">
-            <h4 className="font-medium text-[#1b4332]">Experience {index + 1}</h4>
-            <Button variant="ghost" size="sm" onClick={() => removeExperience(index)}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              type="text"
-              value={ex.role}
-              onChange={(e) => updateExperience(index, "role", e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-              placeholder="Job Title"
-            />
-            <input
-              type="text"
-              value={ex.company}
-              onChange={(e) => updateExperience(index, "company", e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-              placeholder="Company"
-            />
-          </div>
+      {Object.keys(data).map((field) => (
+        <div key={field}>
+          <label className="block text-sm font-medium text-[#1b4332] mb-1 capitalize">
+            {field.replace(/([A-Z])/g, " $1")}
+          </label>
           <input
             type="text"
-            value={ex.duration || ""}
-            onChange={(e) => updateExperience(index, "duration", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-            placeholder="Duration (e.g. Jan 2023 - Present)"
-          />
-          <textarea
-            value={ex.project || ""}
-            onChange={(e) => updateExperience(index, "project", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-            placeholder="Key project or achievement"
-            rows={2}
+            value={data[field as keyof typeof data]}
+            onChange={(e) => setData({ ...data, [field]: e.target.value })}
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#1b4332]"
           />
         </div>
       ))}
-      <Button variant="outline" onClick={addExperience} className="w-full gap-2">
-        <Plus className="w-4 h-4" /> Add Experience
-      </Button>
-      <div className="flex gap-3 pt-4">
-        <Button onClick={handleSave} className="flex-1 bg-[#1b4332] hover:bg-[#2d6a4f]">
-          Save Changes
+      <div className="flex gap-2 pt-2">
+        <Button onClick={() => { onSave(data); onClose(); }} className="flex-1 bg-[#1b4332] hover:bg-[#2d6a4f]">
+          Save
         </Button>
         <Button variant="outline" onClick={onClose} className="flex-1">
           Cancel
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
-function SkillsModal({ profile, onSave, onClose }: { profile: ProfileData; onSave: (data: Partial<ProfileData>) => void; onClose: () => void }) {
-  const [skillInput, setSkillInput] = useState("")
-  const [skills, setSkills] = useState(profile.skills || [])
-
+function SkillsModal({ profile, onSave, onClose }: any) {
+  const [skills, setSkills] = useState(profile.skills || []);
+  const [skillInput, setSkillInput] = useState("");
   const addSkill = () => {
     if (skillInput.trim() && !skills.includes(skillInput.trim())) {
-      setSkills([...skills, skillInput.trim()])
-      setSkillInput("")
+      setSkills([...skills, skillInput.trim()]);
+      setSkillInput("");
     }
-  }
-
-  const removeSkill = (skillToRemove: string) => {
-    setSkills(skills.filter(skill => skill !== skillToRemove))
-  }
-
-  const handleSave = () => {
-    onSave({ skills })
-    onClose()
-  }
-
+  };
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-[#1b4332] mb-2">Add Skills</label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={skillInput}
-            onChange={(e) => setSkillInput(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && addSkill()}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1b4332] focus:border-transparent"
-            placeholder="e.g. JavaScript, React, Python"
-          />
-          <Button onClick={addSkill} size="sm">
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
+      <div className="flex gap-2">
+        <input
+          value={skillInput}
+          onChange={(e) => setSkillInput(e.target.value)}
+          className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#1b4332]"
+          placeholder="Add a skill"
+          onKeyDown={(e) => e.key === "Enter" && addSkill()}
+        />
+        <Button size="sm" onClick={addSkill}>
+          <Plus className="w-4 h-4" />
+        </Button>
       </div>
-      
-      {skills.length > 0 && (
-        <div>
-          <label className="block text-sm font-medium text-[#1b4332] mb-2">Your Skills</label>
-          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-            {skills.map((skill, index) => (
-              <span
-                key={index}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-[#e9f5ef] text-[#1b4332] rounded-full text-sm"
-              >
-                {skill}
-                <button onClick={() => removeSkill(skill)} className="hover:text-red-600">
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="flex gap-3 pt-4">
-        <Button onClick={handleSave} className="flex-1 bg-[#1b4332] hover:bg-[#2d6a4f]">
-          Save Changes
+      <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+        {skills.map((skill: string, i: number) => (
+          <span key={i} className="px-2 py-1 bg-[#e9f5ef] text-[#1b4332] rounded-full text-sm flex items-center gap-1">
+            {skill}
+            <button onClick={() => setSkills(skills.filter((s: string) => s !== skill))}>
+              <X className="w-3 h-3 text-red-500" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2 pt-2">
+        <Button onClick={() => { onSave({ skills }); onClose(); }} className="flex-1 bg-[#1b4332] hover:bg-[#2d6a4f]">
+          Save
         </Button>
         <Button variant="outline" onClick={onClose} className="flex-1">
           Cancel
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
-/* ------------------------------------------------------------- */
-/* Page                                                          */
-/* ------------------------------------------------------------- */
-
-export default function ProfilePage() {
-  const router = useRouter()
-  const [profile, setProfile] = useState<ProfileData>(DEFAULT_PROFILE)
-  const [modal, setModal] = useState<null | "personal" | "education" | "experience" | "skills">(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-
-  /* Load Data */
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("profile_data")
-      if (saved) setProfile(JSON.parse(saved))
-    } catch {
-      setProfile(DEFAULT_PROFILE)
-    }
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem("profile_data", JSON.stringify(profile))
-  }, [profile])
-
-  const completion = useMemo(() => calcCompletion(profile), [profile])
-
-  const savePartial = (partial: Partial<ProfileData>) =>
-    setProfile((p) => ({ ...p, ...partial }))
-
-  const downloadATSResume = () => {
-    const blob = new Blob([`Name: ${profile.fullName}\nHeadline: ${profile.headline}\nSkills: ${profile.skills?.join(", ")}`], { type: "text/plain;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "ats_resume.txt"
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
+/* Resume and Settings Tabs (from previous) */
+function ResumeTab({ profile, onDownload }: any) {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#f8f9fa] via-[#f1f3f2] to-[#e9ecef] font-sans text-[#1d2b27]">
-      {/* Mobile Menu Button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="bg-white/90 backdrop-blur-sm border-[#1b4332]/20"
-        >
-          <Menu className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      <div className="flex min-h-screen">
-        {/* Sidebar */}
-        <aside className={cn(
-          "shrink-0 flex-col gap-6 p-6 bg-white/70 backdrop-blur-lg border-r border-[#dce2dc] shadow-[inset_-1px_0_0_rgba(0,0,0,0.03)] transition-all duration-300",
-          "lg:flex lg:translate-x-0",
-          sidebarCollapsed ? "lg:w-20" : "w-64 xl:w-72",
-          sidebarOpen ? "fixed inset-y-0 left-0 z-50 flex translate-x-0 w-64" : "fixed inset-y-0 left-0 z-50 flex -translate-x-full lg:translate-x-0"
-        )}>
-          <div className="flex items-center justify-between">
-            {!sidebarCollapsed && (
-              <div>
-                <h2 className="text-lg font-bold tracking-tight text-[#1b4332]">Growth Charter</h2>
-                <p className="text-sm text-[#4f6f56]">Your Professional Profile</p>
+    <div className="space-y-8">
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold text-[#1b4332] mb-4">Resume Builder</h2>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="font-medium text-[#1b4332] mb-3">Download Options</h3>
+            <Button onClick={() => onDownload("pdf")} className="w-full mb-2 bg-[#1b4332] hover:bg-[#2d6a4f]">
+              Download PDF
+            </Button>
+            <Button onClick={() => onDownload("docx")} variant="outline" className="w-full mb-2 border-[#1b4332]/30 text-[#1b4332]">
+              Download DOCX
+            </Button>
+            <Button onClick={() => onDownload("txt")} variant="outline" className="w-full border-[#1b4332]/30 text-[#1b4332]">
+              Download TXT
+            </Button>
+          </div>
+          <div>
+            <h3 className="font-medium text-[#1b4332] mb-3">ATS Optimization</h3>
+            <div className="bg-[#e9f5ef] p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="font-medium text-[#1b4332]">ATS Score: 85%</span>
               </div>
-            )}
-            <div className="flex items-center gap-2">
-              {/* Desktop collapse button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="hidden lg:flex text-[#1b4332] hover:bg-[#1b4332]/10"
-              >
-                {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-              </Button>
-              {/* Mobile close button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarOpen(false)}
-                className="lg:hidden"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          <nav className="space-y-2">
-            <SidebarItem icon={<User />} label="Overview" active collapsed={sidebarCollapsed} />
-            <SidebarItem 
-              icon={<Briefcase />} 
-              label="Resume & Skills" 
-              collapsed={sidebarCollapsed}
-              onClick={() => router.push("/user/resume")}
-            />
-            <SidebarItem 
-              icon={<Settings />} 
-              label="Account Settings" 
-              collapsed={sidebarCollapsed}
-              onClick={() => router.push("/user/settings")}
-            />
-          </nav>
-
-          <div className="mt-auto space-y-3">
-            <Button
-              onClick={() => router.push("/pricing")}
-              className={cn(
-                "w-full gap-2 rounded-full bg-[#1b4332] hover:bg-[#2d6a4f] transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02]",
-                sidebarCollapsed && "px-2"
-              )}
-              title={sidebarCollapsed ? "Pricing" : undefined}
-            >
-              <Crown className="w-4 h-4" />
-              {!sidebarCollapsed && " Pricing"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push("/")}
-              className={cn(
-                "w-full gap-2 border-[#1b4332]/30 text-[#1b4332] hover:bg-[#1b4332]/5 rounded-full",
-                sidebarCollapsed && "px-2"
-              )}
-              title={sidebarCollapsed ? "Sign out" : undefined}
-            >
-              <LogOut className="w-4 h-4" />
-              {!sidebarCollapsed && " Sign out"}
-            </Button>
-          </div>
-        </aside>
-
-        {/* Main Section */}
-        <section className="flex-1 w-full">
-          {/* Banner */}
-          <header className="relative h-40 sm:h-48 md:h-56 bg-gradient-to-r from-[#1b4332] to-[#40916c] overflow-hidden">
-            {profile.bannerUrl && (
-              <img src={profile.bannerUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover opacity-80 mix-blend-overlay" />
-            )}
-            <div className="absolute bottom-3 right-3">
-              <UploadButton
-                label="Change Banner"
-                icon={<ImageIcon className="w-4 h-4" />}
-                onPick={(file) => savePartial({ bannerUrl: URL.createObjectURL(file) })}
-              />
-            </div>
-          </header>
-
-          {/* Profile Header */}
-          <div className="px-3 sm:px-6 -mt-12 md:-mt-16 py-8">
-            <motion.div
-              initial={{ opacity: 0, y: 25 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-            >
-              <Card className="relative mx-auto max-w-5xl p-6 md:p-8 bg-white/70 backdrop-blur-md rounded-2xl border border-[#dce2dc] shadow-[0_8px_30px_rgba(0,0,0,0.05)]">
-                {/* Avatar */}
-                <div className="absolute -top-10 left-6">
-                  <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-2xl overflow-hidden ring-4 ring-white shadow-xl bg-white">
-                    {profile.avatarUrl ? (
-                      <img src={profile.avatarUrl} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full grid place-items-center text-[#1b4332]/40">
-                        <User className="w-10 h-10" />
-                      </div>
-                    )}
-                    <div className="absolute bottom-1 right-1">
-                      <UploadButton
-                        label="Change"
-                        icon={<Camera className="w-4 h-4" />}
-                        onPick={(file) => savePartial({ avatarUrl: URL.createObjectURL(file) })}
-                        small
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-10 sm:pt-6 md:pt-4 py-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                      <h1 className="py-5 text-2xl font-semibold text-[#1b4332] tracking-tight">{profile.fullName || "Your Name"}</h1>
-                      <p className="text-[#2d6a4f] text-sm sm:text-base">{profile.headline || "Add a professional headline"}</p>
-                      <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-600">
-                        {profile.location && <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {profile.location}</span>}
-                        {profile.linkedin && <span className="inline-flex items-center gap-1"><ExternalLink className="w-3.5 h-3.5" /> {profile.linkedin}</span>}
-                        {profile.email && <span>{profile.email}</span>}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button className="gap-2 rounded-full bg-[#1b4332] hover:bg-[#2d6a4f] transition-all duration-300 shadow hover:scale-[1.02]" onClick={downloadATSResume}>
-                        <Download className="w-4 h-4" /> Download Resume
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="gap-2 rounded-full border-[#1b4332]/30 text-[#1b4332] hover:bg-[#1b4332]/5"
-                        onClick={() => setModal("personal")}
-                      >
-                        <Pencil className="w-4 h-4" /> Edit
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Profile Completion */}
-                  <div className="mt-6">
-                    <div className="flex justify-between mb-1">
-                      <p className="text-sm font-medium text-[#1b4332]">Profile Completeness</p>
-                      <p className="text-sm text-[#2d6a4f]">{completion}%</p>
-                    </div>
-                    <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-[#74c69d] to-[#1b4332] transition-all duration-500"
-                        style={{ width: `${completion}%` }}
-                      />
-                    </div>
-                    {completion < 100 && (
-                      <p className="mt-2 text-xs text-gray-600">Complete your profile to boost discoverability and recommendations.</p>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          </div>
-
-          {/* Details Grid */}
-          <div className="mx-auto max-w-5xl p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            <motion.div initial={{ opacity: 0, y: 25 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-              <Card className="p-5 border-[#dce2dc] bg-white/60 rounded-2xl backdrop-blur-sm">
-                <SectionHeader icon={<BookOpen />} title="Education" onEdit={() => setModal("education")} />
-                {profile.education?.length ? (
-                  <div className="space-y-3 mt-2">
-                    {profile.education.map((ed, i) => (
-                      <div key={i} className="p-3 rounded-lg border bg-white/70">
-                        <p className="font-medium text-[#1b4332]">{ed.degree || "Degree"} {ed.institution ? `— ${ed.institution}` : ""}</p>
-                        <p className="text-sm text-gray-600">{ed.field && `Field: ${ed.field}`} {ed.gpa && `GPA: ${ed.gpa}`}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : <EmptyState text="Add your highest degree and certifications." />}
-              </Card>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 25 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              <Card className="p-5 border-[#dce2dc] bg-white/60 rounded-2xl backdrop-blur-sm">
-                <SectionHeader icon={<Stars />} title="Skills" onEdit={() => setModal("skills")} />
-                {profile.skills?.length ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {profile.skills.map((s, i) => (
-                      <span key={i} className="px-3 py-1.5 rounded-full bg-[#e9f5ef] text-[#1b4332] text-sm font-medium shadow-sm">{s}</span>
-                    ))}
-                  </div>
-                ) : <EmptyState text="Add 5+ skills to improve your ATS visibility." />}
-              </Card>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 25 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-              <Card className="p-5 border-[#dce2dc] bg-white/60 rounded-2xl backdrop-blur-sm lg:col-span-3">
-                <SectionHeader icon={<Briefcase />} title="Experience" onEdit={() => setModal("experience")} />
-                {profile.experience?.length ? (
-                  <div className="mt-2 grid md:grid-cols-2 gap-3">
-                    {profile.experience.map((ex, i) => (
-                      <div key={i} className="p-4 rounded-lg border bg-white/70">
-                        <p className="font-medium text-[#1b4332]">{ex.role || "Role"} — {ex.company}</p>
-                        <p className="text-sm text-gray-600">{ex.duration}</p>
-                        {ex.project && <p className="text-sm mt-1"><span className="font-medium">Project:</span> {ex.project}</p>}
-                      </div>
-                    ))}
-                  </div>
-                ) : <EmptyState text="Add internships, freelance or full-time roles." />}
-              </Card>
-            </motion.div>
-          </div>
-        </section>
-      </div>
-
-      {/* Modals */}
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold text-[#1b4332]">
-                Edit {modal === "personal" ? "Personal Info" : modal.charAt(0).toUpperCase() + modal.slice(1)}
-              </h2>
-              <Button variant="ghost" size="sm" onClick={() => setModal(null)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="p-6">
-              {modal === "personal" && <PersonalModal profile={profile} onSave={savePartial} onClose={() => setModal(null)} />}
-              {modal === "education" && <EducationModal profile={profile} onSave={savePartial} onClose={() => setModal(null)} />}
-              {modal === "experience" && <ExperienceModal profile={profile} onSave={savePartial} onClose={() => setModal(null)} />}
-              {modal === "skills" && <SkillsModal profile={profile} onSave={savePartial} onClose={() => setModal(null)} />}
+              <p className="text-xs text-gray-600">Your resume is well-optimized for job screening systems.</p>
             </div>
           </div>
         </div>
-      )}
-    </main>
-  )
-}
+      </Card>
 
-/* ------------------------------------------------------------- */
-/* Reusable Components                                            */
-/* ------------------------------------------------------------- */
-
-function SidebarItem({ icon, label, active = false, collapsed = false, onClick }: { 
-  icon: React.ReactNode; 
-  label: string; 
-  active?: boolean; 
-  collapsed?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer relative group",
-        active
-          ? "bg-[#e9f5ef] text-[#1b4332] border border-[#c3e6cb]"
-          : "text-[#4f6f56] hover:bg-[#e9f5ef]/60",
-        collapsed && "justify-center px-2"
-      )}
-      title={collapsed ? label : undefined}
-      onClick={onClick}
-    >
-      <div className="h-6 w-6 grid place-items-center rounded-md bg-[#1b4332]/10 text-[#1b4332]">{icon}</div>
-      {!collapsed && label}
-      
-      {/* Tooltip for collapsed state */}
-      {collapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-          {label}
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold text-[#1b4332] mb-4">Skill Recommendations</h2>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {["Cloud Computing", "Data Analysis", "Project Management", "UI/UX Design"].map((skill) => (
+            <div key={skill} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+              <span>{skill}</span>
+              <Button size="sm" variant="outline" className="text-xs">
+                <Plus className="w-3 h-3 mr-1" /> Add
+              </Button>
+            </div>
+          ))}
         </div>
-      )}
+      </Card>
     </div>
-  )
+  );
 }
 
-function SectionHeader({ icon, title, onEdit }: { icon: React.ReactNode; title: string; onEdit?: () => void }) {
+function SettingsTab({ settings, saveSettings, exportData, setShowDeleteConfirm }: any) {
   return (
-    <div className="flex items-center justify-between mb-3">
-      <div className="flex items-center gap-2">
-        <div className="h-8 w-8 grid place-items-center rounded-lg bg-[#1b4332] text-white">{icon}</div>
-        <h3 className="text-lg font-semibold text-[#1b4332]">{title}</h3>
-      </div>
-      {onEdit && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onEdit}
-          className="text-[#1b4332] hover:bg-[#1b4332]/10"
-        >
-          <Pencil className="w-4 h-4" />
-        </Button>
-      )}
+    <div className="space-y-8">
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold text-[#1b4332] mb-4">Account Information</h3>
+        <div className="space-y-4">
+          <input
+            type="email"
+            value={settings.email}
+            onChange={(e) => saveSettings({ email: e.target.value })}
+            placeholder="Email"
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#1b4332]"
+          />
+          <input
+            type="tel"
+            value={settings.phone}
+            onChange={(e) => saveSettings({ phone: e.target.value })}
+            placeholder="Phone"
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#1b4332]"
+          />
+        </div>
+      </Card>
+
+      <Card className="p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-[#1b4332] mb-4">Privacy & Security</h3>
+        <div className="flex items-center justify-between">
+          <span className="text-sm">Enable 2FA</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => saveSettings({ security: { ...settings.security, twoFactor: !settings.security.twoFactor } })}
+            className="text-xs border-[#1b4332]/30 text-[#1b4332]"
+          >
+            {settings.security.twoFactor ? <Check className="w-4 h-4 mr-1" /> : <Key className="w-4 h-4 mr-1" />}
+            {settings.security.twoFactor ? "Enabled" : "Enable"}
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-[#1b4332] mb-4">Data Management</h3>
+        <div className="flex gap-4">
+          <Button onClick={exportData} className="flex-1 bg-[#1b4332] hover:bg-[#2d6a4f] text-white">
+            Export Data
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="flex-1 text-red-600 border-red-600 hover:bg-red-50"
+          >
+            Delete Account
+          </Button>
+        </div>
+      </Card>
     </div>
-  )
-}
-
-function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="flex items-center gap-2 text-gray-500 text-sm bg-gray-50 border border-dashed border-gray-200 rounded-lg p-3">
-      <Info className="w-4 h-4 text-[#1b4332]/70" /> {text}
-    </div>
-  )
-}
-
-function UploadButton({ label, icon, onPick, small = false }: { label: string; icon: React.ReactNode; onPick: (file: File) => void; small?: boolean }) {
-  const ref = useRef<HTMLInputElement | null>(null)
-  return (
-    <>
-      <Button
-        size={small ? "sm" : "default"}
-        variant="secondary"
-        className={cn(
-          "gap-2 bg-white/80 text-[#1b4332] hover:bg-white rounded-full border border-[#1b4332]/10 shadow-sm transition-all",
-          small ? "h-8 px-3 text-xs" : ""
-        )}
-        onClick={() => ref.current?.click()}
-      >
-        {icon} {label}
-      </Button>
-      <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onPick(e.target.files[0])} />
-    </>
-  )
-}
-
-/* ------------------------------------------------------------- */
-/* Helpers                                                        */
-/* ------------------------------------------------------------- */
-
-function calcCompletion(p: ProfileData): number {
-  const checks: Array<[boolean, number]> = [
-    [!!p.fullName, 10],
-    [!!p.headline, 10],
-    [!!p.location, 5],
-    [!!p.email, 5],
-    [!!p.linkedin, 10],
-    [!!p.avatarUrl, 10],
-    [!!p.bannerUrl, 5],
-    [!!(p.education && p.education.length), 15],
-    [!!(p.experience && p.experience.length), 15],
-    [!!(p.skills && p.skills.length >= 5), 15],
-  ]
-  const done = checks.reduce((sum, [ok, weight]) => sum + (ok ? weight : 0), 0)
-  return Math.min(100, Math.round((done / 100) * 100))
+  );
 }
