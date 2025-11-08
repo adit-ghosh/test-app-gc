@@ -33,14 +33,14 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
 
   // 🚀 UPDATED: More engaging, action-oriented menu names
   const navItems = [
-    { href: "/", label: "Growth Pulse", icon: Home, description: "Your progress dashboard" },
-    { href: "#", label: "Growth Analytics", icon: Zap, description: "Deep score insights" },
-    { href: "/#", label: "Growth Accelerator", icon: Rocket, description: "AI-powered tips" },
-    { href: "/#", label: "Path Explorer", icon: Compass, description: "Discover new careers" },
-    { href: "/#", label: "Career Navigator", icon: Navigation, description: "Your growth map" },
-    { href: "/#", label: "Opportunity Radar", icon: Radar, description: "Active job matches" },
-    { href: "/#", label: "Growth Arena", icon: Target, description: "Compete & grow" },
-    { href: "/#", label: "Settings", icon: Settings, description: "Account preferences" },
+    { href: "/dashboard", label: "Growth Pulse", icon: Home, description: "Your progress dashboard" },
+    { href: "/dashboard/gc-score", label: "Growth Analytics", icon: Zap, description: "Deep score insights" },
+    { href: "/dashboard/ai-suggestions", label: "Growth Accelerator", icon: Rocket, description: "AI-powered tips" },
+    { href: "/dashboard/career-roadmap", label: "Path Explorer", icon: Compass, description: "Discover new careers" },
+    { href: "/dashboard/career-diversion", label: "Career Navigator", icon: Navigation, description: "Your growth map" },
+    { href: "/dashboard/company-matches", label: "Opportunity Radar", icon: Radar, description: "Active job matches" },
+    { href: "/dashboard/group-competition", label: "Growth Arena", icon: Target, description: "Compete & grow" },
+    { href: "/dashboard", label: "Settings", icon: Settings, description: "Account preferences" },
   ]
 
   return (
